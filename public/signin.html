@@ -2,20 +2,20 @@
 <html>
     <head>
         <title>SHouse</title>
+        <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link rel="stylesheet" href="style.css">
     </head>
     <body>
-
         <form id="signin">
             <h1 id="hRegister">Pieslēgšanās</h1><br>
-            <label for="email">E-pasts:</label>
-            <input id="email" type="email" autocomplete="email" placeholder="name@gmail.com"><br>
-            <label for="password">Parole:</label>
+            <label for="username">Lietotājavārds</label>
+            <input id="username" type="text" autocomplete="username" placeholder="vārds"><br>
+            <label for="password">Parole</label>
             <input id="password" type="password" placeholder="**********"><br>
-            <p id="haveAcc">Tev vēl nav konts? Spied <a href="signup.html">šeit:</a></p><br>
-            <button type="submit" id="signinButton">Iesniegt</button><br>
-        </from>
+            <button type="submit">Pieslēgties</button><br>
+            <div id="loginError"></div>
+        </form>
         <script src="app.js"></script>
     </body>
 </html>

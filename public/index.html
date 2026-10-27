@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>SHouse</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body>
+        <header>
+            <div>
+                <strong id="vards"></strong>
+                <small id="loma"></small>
+            </div>
+            <button id="atslegtiesPoga" type="button">Atslēgties</button>
+        </header>
+ 
+        <main>
+            <!-- Tikai administratoram -->
+            <section id="adminSadala" class="paslept">
+                <h2>Izveidot jaunu lietotāju</h2>
+                <form id="jaunaLietotajaForma">
+                    <label for="jLietotajvards">Lietotājvārds</label>
+                    <input type="text" id="jLietotajvards" required>
+                    <label for="jVards">Vārds un uzvārds</label>
+                    <input type="text" id="jVards" required>
+                    <label for="jParole">Parole (vismaz 8 simboli)</label>
+                    <input type="password" id="jParole" autocomplete="new-password" required>
+                    <label for="jLoma">Loma</label>
+                    <select id="jLoma" required></select>
+                    <button type="submit">Izveidot lietotāju</button>
+                </form>
+                <div id="adminZinojums"></div>
+            </section>
+ 
+            <!-- Šeit vēlāk: preces, pasūtījumi, izvietojums (pēc lomas) -->
+        </main>
+ 
+        <script src="app.js"></script>
+    </body>
+</html>
