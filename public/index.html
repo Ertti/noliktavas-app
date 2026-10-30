@@ -8,33 +8,42 @@
     </head>
     <body>
         <header>
-            <div>
+            <div class="header">
+                <strong class="companyName">SHouse</strong>
                 <strong id="vards"></strong>
                 <small id="loma"></small>
+                <button id="logoutBtn" type="button">Atslēgties<img src="img/right-from-bracket-solid.png" width="20px" height="20px"></button>
             </div>
-            <button id="atslegtiesPoga" type="button">Atslēgties</button>
         </header>
- 
-        <main>
-            <!-- Tikai administratoram -->
-            <section id="adminSadala" class="paslept">
-                <h2>Izveidot jaunu lietotāju</h2>
-                <form id="jaunaLietotajaForma">
-                    <label for="jLietotajvards">Lietotājvārds</label>
-                    <input type="text" id="jLietotajvards" required>
-                    <label for="jVards">Vārds un uzvārds</label>
-                    <input type="text" id="jVards" required>
-                    <label for="jParole">Parole (vismaz 8 simboli)</label>
-                    <input type="password" id="jParole" autocomplete="new-password" required>
-                    <label for="jLoma">Loma</label>
-                    <select id="jLoma" required></select>
-                    <button type="submit">Izveidot lietotāju</button>
-                </form>
-                <div id="adminZinojums"></div>
-            </section>
- 
-            <!-- Šeit vēlāk: preces, pasūtījumi, izvietojums (pēc lomas) -->
-        </main>
+
+        <div class="appBody">
+            <nav>
+                <ul>
+                    <li></li>
+                </ul>
+            </nav>
+    
+            <main>
+                <!-- Tikai administratoram -->
+                <section id="adminSadala" class="paslept">
+                    <h2>Izveidot jaunu lietotāju</h2>
+                    <form id="jaunaLietotajaForma">
+                        <label for="jLietotajvards">Lietotājvārds</label>
+                        <input type="text" id="jLietotajvards" required>
+                        <label for="jVards">Vārds un uzvārds</label>
+                        <input type="text" id="jVards" required>
+                        <label for="jParole">Parole (vismaz 8 simboli)</label>
+                        <input type="password" id="jParole" autocomplete="new-password" required>
+                        <label for="jLoma">Loma</label>
+                        <select id="jLoma" required></select>
+                        <button type="submit">Izveidot lietotāju</button>
+                    </form>
+                    <div id="adminZinojums"></div>
+                </section>
+    
+                <!-- Šeit vēlāk: preces, pasūtījumi, izvietojums (pēc lomas) -->
+            </main>
+        </div>
  
         <script src="app.js"></script>
     </body>

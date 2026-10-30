@@ -87,3 +87,11 @@ GROUP BY o.id;
 -- 4. Sākuma dati
 INSERT INTO lomas (nosaukums) VALUES
     ('administrators'), ('noliktavas_darbinieks'), ('plauktu_kartotajs');
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+INSERT INTO lietotaji (lietotajvards, parole, vards_uzvards, loma_id)
+VALUES ('Edza', '$2b$10$jrys9P1mxliyJZwaFuLP2eOJb1grE5KWYgVFaBE7kjV3GviZVxVZm', 'E T', '1')
+
+SELECT l.lietotajvards, r.nosaukums AS loma
+FROM lietotaji l JOIN lomas r ON r.id = l.loma_id;

@@ -1,6 +1,5 @@
 const $ = (id) => document.getElementById(id);
  
-// Palīgfunkcija pieprasījumiem uz serveri
 async function api(url, metode = 'GET', dati) {
   const opcijas = { method: metode, headers: {} };
   if (dati) {
@@ -15,73 +14,36 @@ async function api(url, metode = 'GET', dati) {
   }
   const json = await atbilde.json().catch(() => ({}));
   if (!atbilde.ok) {
-    throw new Error(json.kluda || 'Radās kļūda');
+    const err = new Error(json.kluda || 'Radās kļūda');
+    err.status = atbilde.status;
+    throw err;
   }
   return json;
 }
  
-// Ziņojuma parādīšana (textContent, nevis innerHTML - aizsardzība pret XSS)
 function paradit(elements, teksts, klase) {
   elements.textContent = teksts;
   elements.className = klase || '';
 }
  
-// ---------- Skatu pārslēgšana ----------
- 
-function paraditPieslegtu(lietotajs) {
-  $('loginSadala').classList.add('paslept');
-  $('galvenaSadala').classList.remove('paslept');
+function paraditLietotaju(lietotajs) {
   $('vards').textContent = lietotajs.vards_uzvards;
-  $('loma').textContent = 'Loma: ' + lietotajs.loma;
+  $('loma').textContent = lietotajs.loma;
  
   if (lietotajs.loma === 'administrators') {
     $('adminSadala').classList.remove('paslept');
     ieladetLomas();
-  } else {
-    $('adminSadala').classList.add('paslept');
   }
 }
- 
-function paraditLogin() {
-  $('galvenaSadala').classList.add('paslept');
-  $('loginSadala').classList.remove('paslept');
-  $('loginForma').reset();
-}
- 
-// ---------- Pieslēgšanās ----------
- 
-$('loginForma').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  paradit($('loginKluda'), '');
- 
-  const lietotajvards = $('lietotajvards').value.trim();
-  const parole = $('parole').value;
- 
-  if (!lietotajvards || !parole) {
-    return paradit($('loginKluda'), 'Ievadiet lietotājvārdu un paroli', 'kluda');
-  }
- 
-  try {
-    const atbilde = await api('/api/login', 'POST', { lietotajvards, parole });
-    paraditPieslegtu(atbilde.lietotajs);
-  } catch (err) {
-    paradit($('loginKluda'), err.message, 'kluda');
-  }
-});
- 
-// ---------- Atslēgšanās ----------
- 
-$('atslegtiesPoga').addEventListener('click', async () => {
+
+$('logoutBtn').addEventListener('click', async () => {
   try {
     await api('/api/logout', 'POST');
-  } catch (err) {
-    // Pat ja kļūda, atgriežamies uz pieslēgšanos
-  }
-  paraditLogin();
+  } catch {}
+  window.location.href = 'signin/signin.html';
 });
  
-// ---------- Administratora funkcijas ----------
- 
+// Administratora funkcijas
 async function ieladetLomas() {
   try {
     const lomas = await api('/api/lomas');
@@ -109,8 +71,7 @@ $('jaunaLietotajaForma').addEventListener('submit', async (e) => {
     loma_id: $('jLoma').value,
   };
  
-  // Validācija pārlūkā (serveris to pārbauda vēlreiz)
-  if (!/^[A-Za-z0-9_.-]{3,50}$/.test(dati.lietotajvards)) {
+  if (!/^[\p{L}0-9_.-]{3,50}$/u.test(dati.lietotajvards)) {
     return paradit($('adminZinojums'), 'Lietotājvārds: 3-50 simboli (burti, cipari, _ . -)', 'kluda');
   }
   if (!dati.vards_uzvards) {
@@ -129,13 +90,12 @@ $('jaunaLietotajaForma').addEventListener('submit', async (e) => {
   }
 });
  
-// ---------- Lapas ielāde: vai jau esam pieslēgušies? ----------
- 
+// Lapas ielāde: ja nav pieslēgts, uz pieslēgšanās lapu
 (async function sakums() {
   try {
     const atbilde = await api('/api/me');
-    paraditPieslegtu(atbilde.lietotajs);
+    paraditLietotaju(atbilde.lietotajs);
   } catch {
-    paraditLogin();
+    window.location.href = 'signin/signin.html';
   }
 })();

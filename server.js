@@ -145,7 +145,7 @@ app.post('/api/lietotaji', requireRole('administrators'), async (req, res) => {
     const { lietotajvards, parole, vards_uzvards, loma_id } = req.body || {};
  
     // Validācija
-    if (typeof lietotajvards !== 'string' || !/^[A-Za-z0-9_.-]{3,50}$/.test(lietotajvards.trim())) {
+    if (typeof lietotajvards !== 'string' || !/^[\p{L}0-9_.-]{3,50}$/u.test(lietotajvards.trim())) {
       return kluda(res, 400, 'Lietotājvārds: 3-50 simboli (burti, cipari, _ . -)');
     }
     if (typeof parole !== 'string' || parole.length < 8 || parole.length > 72) {
