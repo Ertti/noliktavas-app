@@ -9,39 +9,52 @@
     <body>
         <header>
             <div class="header">
-                <strong class="companyName">SHouse</strong>
-                <strong id="vards"></strong>
-                <small id="loma"></small>
-                <button id="logoutBtn" type="button">Atslēgties<img src="img/right-from-bracket-solid.png" width="20px" height="20px"></button>
+                <button type="button" class="companyName" popovertarget="menu"><img src="img/menu.png" width="25px" height="25px">SHouse</button>
+                <strong id="name"></strong>
+                <small id="role"></small>
+                <button id="logoutBtn" style="background-color: rgb(234, 84, 84);" type="button">Iziet<img src="img/right-from-bracket-solid.png" width="20px" height="20px"></button>
             </div>
         </header>
 
         <div class="appBody">
             <nav>
                 <ul>
-                    <li></li>
+                    <li>Sākums</li>
+                    <li>Pievienot preci</li>
+                    <li>Pievienot lietotāju</li>
+                    <li>Lietotāji</li>
                 </ul>
             </nav>
     
             <main>
-                <!-- Tikai administratoram -->
-                <section id="adminSadala" class="paslept">
+                <div id="menu" popover>
+                    <ul>
+                        <li>Sākums</li>
+                        <li>Pievienot preci</li>
+                        <li>Pievienot lietotāju</li>
+                        <li>Lietotāji</li>
+                    </ul>
+                </div>
+                
+                <section></section>
+
+                <section id="adminAddUser" class="hide">
                     <h2>Izveidot jaunu lietotāju</h2>
-                    <form id="jaunaLietotajaForma">
+                    <form id="newUserForm">
                         <label for="jLietotajvards">Lietotājvārds</label>
-                        <input type="text" id="jLietotajvards" required>
+                        <input type="text" id="jLietotajvards" required><br>
                         <label for="jVards">Vārds un uzvārds</label>
-                        <input type="text" id="jVards" required>
+                        <input type="text" id="jVards" required><br>
                         <label for="jParole">Parole (vismaz 8 simboli)</label>
-                        <input type="password" id="jParole" autocomplete="new-password" required>
+                        <input type="password" id="jParole" autocomplete="new-password" required><br>
                         <label for="jLoma">Loma</label>
-                        <select id="jLoma" required></select>
-                        <button type="submit">Izveidot lietotāju</button>
+                        <select id="jLoma" required></select><br>
+                        <button type="submit" style="margin-left: 10px;">Izveidot lietotāju</button>
                     </form>
-                    <div id="adminZinojums"></div>
+                    <div id="adminMessage"></div>
                 </section>
-    
-                <!-- Šeit vēlāk: preces, pasūtījumi, izvietojums (pēc lomas) -->
+
+                <section></section>
             </main>
         </div>
  

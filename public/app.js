@@ -27,11 +27,11 @@ function paradit(elements, teksts, klase) {
 }
  
 function paraditLietotaju(lietotajs) {
-  $('vards').textContent = lietotajs.vards_uzvards;
-  $('loma').textContent = lietotajs.loma;
+  $('name').textContent = lietotajs.vards_uzvards;
+  $('role').textContent = lietotajs.loma;
  
   if (lietotajs.loma === 'administrators') {
-    $('adminSadala').classList.remove('paslept');
+    $('adminAddUser').classList.remove('hide');
     ieladetLomas();
   }
 }
@@ -56,13 +56,13 @@ async function ieladetLomas() {
       izvelne.appendChild(opcija);
     });
   } catch (err) {
-    paradit($('adminZinojums'), err.message, 'kluda');
+    paradit($('adminMessage'), err.message, 'kluda');
   }
 }
  
-$('jaunaLietotajaForma').addEventListener('submit', async (e) => {
+$('newUserForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  paradit($('adminZinojums'), '');
+  paradit($('adminMessage'), '');
  
   const dati = {
     lietotajvards: $('jLietotajvards').value.trim(),
@@ -72,21 +72,21 @@ $('jaunaLietotajaForma').addEventListener('submit', async (e) => {
   };
  
   if (!/^[\p{L}0-9_.-]{3,50}$/u.test(dati.lietotajvards)) {
-    return paradit($('adminZinojums'), 'Lietotājvārds: 3-50 simboli (burti, cipari, _ . -)', 'kluda');
+    return paradit($('adminMessage'), 'Lietotājvārds: 3-50 simboli (burti, cipari, _ . -)', 'kluda');
   }
   if (!dati.vards_uzvards) {
-    return paradit($('adminZinojums'), 'Norādiet vārdu un uzvārdu', 'kluda');
+    return paradit($('adminMessage'), 'Norādiet vārdu un uzvārdu', 'kluda');
   }
   if (dati.parole.length < 8) {
-    return paradit($('adminZinojums'), 'Parolei jābūt vismaz 8 simbolus garai', 'kluda');
+    return paradit($('adminMessage'), 'Parolei jābūt vismaz 8 simbolus garai', 'kluda');
   }
  
   try {
     const atbilde = await api('/api/lietotaji', 'POST', dati);
-    paradit($('adminZinojums'), atbilde.zinojums + ': ' + atbilde.lietotajs.lietotajvards, 'veiksme');
-    $('jaunaLietotajaForma').reset();
+    paradit($('adminMessage'), atbilde.zinojums + ': ' + atbilde.lietotajs.lietotajvards, 'veiksme');
+    $('newUserForm').reset();
   } catch (err) {
-    paradit($('adminZinojums'), err.message, 'kluda');
+    paradit($('adminMessage'), err.message, 'kluda');
   }
 });
  

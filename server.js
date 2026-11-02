@@ -159,8 +159,8 @@ app.post('/api/lietotaji', requireRole('administrators'), async (req, res) => {
       return kluda(res, 400, 'Izvēlieties lomu');
     }
  
-    const loma = await pool.query('SELECT id FROM lomas WHERE id = $1', [lomaId]);
-    if (loma.rowCount === 0) {
+    const role = await pool.query('SELECT id FROM lomas WHERE id = $1', [lomaId]);
+    if (role.rowCount === 0) {
       return kluda(res, 400, 'Izvēlētā loma neeksistē');
     }
  
