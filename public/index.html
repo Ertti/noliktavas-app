@@ -19,26 +19,28 @@
         <div class="appBody">
             <nav>
                 <ul>
-                    <li>Sākums</li>
-                    <li>Pievienot preci</li>
-                    <li>Pievienot lietotāju</li>
-                    <li>Lietotāji</li>
+                    <li><button class="navButton" data-section="home">Sākums</button></li>
+                    <li class="hide" data-roles="administrators,noliktavas_darbinieks"><button class="navButton" data-section="addProduct">Pievienot produktu</button></li>
+                    <li class="hide" data-roles="administrators"><button class="navButton" data-section="adminAddUser">Pievienot lietotāju</button></li>
+                    <li class="hide" data-roles="administrators"><button class="navButton" data-section="users">Lietotāji</button></li>
                 </ul>
             </nav>
     
             <main>
                 <div id="menu" popover>
                     <ul>
-                        <li>Sākums</li>
-                        <li>Pievienot preci</li>
-                        <li>Pievienot lietotāju</li>
-                        <li>Lietotāji</li>
+                        <li><button class="navButton" data-section="home">Sākums</button></li>
+                        <li class="hide" data-roles="administrators,noliktavas_darbinieks"><button class="navButton" data-section="addProduct">Pievienot produktu</button></li>
+                        <li class="hide" data-roles="administrators"><button class="navButton" data-section="adminAddUser">Pievienot lietotāju</button></li>
+                        <li class="hide" data-roles="administrators"><button class="navButton" data-section="users">Lietotāji</button></li>
                     </ul>
                 </div>
                 
-                <section></section>
+                <section id="addProduct" class="panel hide">
+                    <h2>Pievienot produktu</h2>
+                </section>
 
-                <section id="adminAddUser" class="hide">
+                <section id="adminAddUser" class="panel hide">
                     <h2>Izveidot jaunu lietotāju</h2>
                     <form id="newUserForm">
                         <label for="jLietotajvards">Lietotājvārds</label>
@@ -54,7 +56,9 @@
                     <div id="adminMessage"></div>
                 </section>
 
-                <section></section>
+                <section id="users" class="panel hide">
+                    <h2>Lietotāji</h2>
+                </section>
             </main>
         </div>
  

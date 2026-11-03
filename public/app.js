@@ -25,13 +25,33 @@ function paradit(elements, teksts, klase) {
   elements.textContent = teksts;
   elements.className = klase || '';
 }
+
+const panels = document.querySelectorAll('.panel');
+ 
+// Parāda vienu sadaļu un paslēpj pārējās. Ja id neatbilst nevienai (piem. 'home'), visas ir aizvērtas.
+function showSection(id) {
+  panels.forEach((p) => p.classList.toggle('hide', p.id !== id));
+}
+ 
+// Viens klausītājs visām pogām ar data-section (sānu izvēlne, mobilā izvēlne, aizvēršanas pogas)
+document.addEventListener('click', (e) => {
+  const poga = e.target.closest('[data-section]');
+  if (!poga) return;
+  showSection(poga.dataset.section);
+  $('menu').hidePopover?.(); // aizver mobilo izvēlni, ja tā bija atvērta
+});
  
 function paraditLietotaju(lietotajs) {
   $('name').textContent = lietotajs.vards_uzvards;
   $('role').textContent = lietotajs.loma;
+
+  document.querySelectorAll('[data-roles]').forEach((el) => {
+    if (el.dataset.roles.split(',').includes(lietotajs.loma)) {
+      el.classList.remove('hide');
+    }
+  });
  
   if (lietotajs.loma === 'administrators') {
-    $('adminAddUser').classList.remove('hide');
     ieladetLomas();
   }
 }
