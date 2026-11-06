@@ -29,42 +29,56 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      httpOnly: true,                                   // JS nevar nolasīt sīkdatni
-      sameSite: 'strict',                               // aizsardzība pret CSRF
-      secure: process.env.NODE_ENV === 'production',    // HTTPS produkcijā
-      maxAge: 1000 * 60 * 60 * 8,                       // 8 stundas
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 1000 * 60 * 60 * 8,
     },
   })
 );
 
 app.use(express.static('public'));
 
-// Fiktīvs hash, lai laiks būtu vienāds arī tad, ja lietotājs neeksistē
 const DUMMY_HASH = bcrypt.hashSync('fiktiva-parole', 10);
- 
+
 function kluda(res, status, zinojums) {
   return res.status(status).json({ kluda: zinojums });
 }
+
+async function requireLogin(req, res, next) {
+  try {
+    const sesija = req.session.lietotajs;
+    if (!sesija) {
+      return kluda(res, 401, 'Jums jāpieslēdzas sistēmai');
+    }
  
-// ---------- Starpprogrammatūra (middleware) ----------
+    const r = await pool.query(
+      `SELECT l.id, l.lietotajvards, l.vards_uzvards, l.loma_id, r.nosaukums AS loma
+       FROM lietotaji l
+       JOIN lomas r ON r.id = l.loma_id
+       WHERE l.id = $1`,
+      [sesija.id]
+    );
+    if (r.rowCount === 0) {
+      return req.session.destroy(() => kluda(res, 401, 'Konts vairs neeksistē'));
+    }
  
-function requireLogin(req, res, next) {
-  if (!req.session.lietotajs) {
-    return kluda(res, 401, 'Jums jāpieslēdzas sistēmai');
+    req.session.lietotajs = r.rows[0];
+    next();
+  } catch (err) {
+    console.error(err);
+    kluda(res, 500, 'Servera kļūda, mēģiniet vēlreiz');
   }
-  next();
 }
  
 function requireRole(...atlautasLomas) {
-  return (req, res, next) => {
-    if (!req.session.lietotajs) {
-      return kluda(res, 401, 'Jums jāpieslēdzas sistēmai');
-    }
-    if (!atlautasLomas.includes(req.session.lietotajs.loma)) {
-      return kluda(res, 403, 'Jums nav tiesību veikt šo darbību');
-    }
-    next();
-  };
+  return (req, res, next) =>
+    requireLogin(req, res, () => {
+      if (!atlautasLomas.includes(req.session.lietotajs.loma)) {
+        return kluda(res, 403, 'Jums nav tiesību veikt šo darbību');
+      }
+      next();
+    });
 }
  
 // ---------- Pieslēgšanās ----------
@@ -90,13 +104,11 @@ app.post('/api/login', async (req, res) => {
  
     const lietotajs = result.rows[0];
     const derigs = await bcrypt.compare(parole, lietotajs ? lietotajs.parole : DUMMY_HASH);
- 
-    // Viena un tā pati ziņa gan nepareizam vārdam, gan parolei (neatklāj, kas ir nepareizs)
+
     if (!lietotajs || !derigs) {
       return kluda(res, 401, 'Nepareizs lietotājvārds vai parole');
     }
- 
-    // Jauns sesijas ID pēc pieslēgšanās (aizsardzība pret session fixation)
+
     req.session.regenerate((err) => {
       if (err) return kluda(res, 500, 'Servera kļūda, mēģiniet vēlreiz');
       req.session.lietotajs = {
@@ -182,6 +194,8 @@ app.post('/api/lietotaji', requireRole('administrators'), async (req, res) => {
     kluda(res, 500, 'Servera kļūda, mēģiniet vēlreiz');
   }
 });
+
+app.use('/api', require('./routes/api')(pool, requireRole, kluda));
  
 // ---------- Neatrasts un kļūdu apstrāde ----------
  
