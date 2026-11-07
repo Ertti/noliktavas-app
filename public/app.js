@@ -128,6 +128,8 @@ $('newUserForm').addEventListener('submit', async (e) => {
 
 const lomuNosaukums = (n) => (typeof nosaukumi !== 'undefined' && nosaukumi[n]) || n;
  
+let manaLoma = null; // tiek iestatīta lapas beigās no /api/me
+ 
 // Katras sadaļas ielādes funkcija; to izsauc, kad sadaļu atver
 const ielades = {};
  
@@ -135,6 +137,8 @@ document.addEventListener('click', (e) => {
   const pogaEl = e.target.closest('[data-section]');
   if (pogaEl && ielades[pogaEl.dataset.section]) ielades[pogaEl.dataset.section]();
 });
+ 
+// ---------- Kopīgi palīgi ----------
  
 function izveidotPogu(teksts, klase, onClick) {
   const b = document.createElement('button');
@@ -296,7 +300,8 @@ function izveidotCrud(sadalasId, cfg) {
       tabula(cfg.columns, rindas, (r) => {
         const pogas = [];
         if (cfg.canEdit !== false) pogas.push(izveidotPogu('Rediģēt', 'rowBtn', () => sakumtLabot(r)));
-        if (cfg.canDelete !== false) pogas.push(izveidotPogu('Dzēst', 'rowBtn dangerBtn', () => dzest(r)));
+        const drikstDzest = typeof cfg.canDelete === 'function' ? cfg.canDelete() : cfg.canDelete !== false;
+        if (drikstDzest) pogas.push(izveidotPogu('Dzēst', 'rowBtn dangerBtn', () => dzest(r)));
         return pogas;
       })
     );
@@ -380,13 +385,222 @@ izveidotCrud('addProduct', {
     { key: 'apraksts', label: 'Apraksts', type: 'textarea', maxlength: 1000 },
     { key: 'cena', label: 'Cena', type: 'number', min: '0', step: '0.01', required: true },
   ],
+  canDelete: () => manaLoma === 'administrators',
   deleteQuestion: (r) => `Vai dzēst preci "${r.nosaukums}"? Tiks dzēsts arī tās izvietojums.`,
 });
+ 
+// ---------- Pasūtījumi (noliktavas darbinieks) ----------
+// Viena sadaļa: forma jauna pasūtījuma izveidei/rediģēšanai un saraksts ar statusa maiņu.
+ 
+const STATUSU_NOSAUKUMI = {
+  jauns: 'Jauns',
+  komplektesana: 'Komplektēšanā',
+  nosutits: 'Nosūtīts',
+  piegadats: 'Piegādāts',
+  atcelts: 'Atcelts',
+};
+// Pogu teksti: kādu statusu poga iestata
+const STATUSU_DARBIBAS = {
+  komplektesana: 'Sākt komplektēšanu',
+  nosutits: 'Nosūtīt',
+  piegadats: 'Atzīmēt kā piegādātu',
+  atcelts: 'Atcelt',
+};
+ 
+function izveidotPasutijumus(sadalasId) {
+  const sadala = $(sadalasId);
+  const konteiners = sadala && sadala.querySelector('.crud');
+  if (!konteiners) return;
+ 
+  const zina = document.createElement('div');
+  const forma = document.createElement('form');
+  const tabulasVieta = document.createElement('div');
+  forma.className = 'crudForm';
+ 
+  let preces = [];
+  let pasutijumi = [];
+  let labojamais = null;
+ 
+  const klientaLabel = document.createElement('label');
+  klientaLabel.textContent = 'Klients';
+  klientaLabel.htmlFor = `${sadalasId}_klients`;
+  const klients = document.createElement('input');
+  klients.type = 'text';
+  klients.id = `${sadalasId}_klients`;
+  klients.maxLength = 150;
+  klients.required = true;
+ 
+  const precuLabel = document.createElement('label');
+  precuLabel.textContent = 'Preces';
+  const rindasVieta = document.createElement('div');
+ 
+  const pievienotPoga = izveidotPogu('+ Pievienot preci', 'rowBtn', () => pievienotRindu());
+  const saglabatPoga = document.createElement('button');
+  saglabatPoga.type = 'submit';
+  const atceltPoga = izveidotPogu('Atcelt', 'rowBtn', atceltLabot);
+ 
+  forma.append(klientaLabel, klients, precuLabel, rindasVieta, pievienotPoga, saglabatPoga, atceltPoga);
+  konteiners.append(zina, forma, tabulasVieta);
+ 
+  function aizpilditPreces(sel, izvelets) {
+    sel.innerHTML = '';
+    const tuksa = document.createElement('option');
+    tuksa.value = '';
+    tuksa.textContent = '- izvēlieties preci -';
+    sel.append(tuksa);
+    preces.forEach((p) => {
+      const op = document.createElement('option');
+      op.value = p.id;
+      op.textContent = `${p.artikuls} - ${p.nosaukums}`;
+      sel.append(op);
+    });
+    sel.value = String(izvelets);
+  }
+ 
+  function pievienotRindu(preceId = '', daudzums = '') {
+    const rinda = document.createElement('div');
+    rinda.className = 'orderLine';
+ 
+    const sel = document.createElement('select');
+    sel.required = true;
+    aizpilditPreces(sel, preceId);
+ 
+    const dau = document.createElement('input');
+    dau.type = 'number';
+    dau.min = '1';
+    dau.step = '1';
+    dau.required = true;
+    dau.placeholder = 'Daudz.';
+    dau.value = daudzums;
+ 
+    const nonemt = izveidotPogu('✕', 'rowBtn dangerBtn', () => rinda.remove());
+    nonemt.setAttribute('aria-label', 'Noņemt rindu');
+ 
+    rinda.append(sel, dau, nonemt);
+    rindasVieta.append(rinda);
+  }
+ 
+  function atceltLabot() {
+    labojamais = null;
+    klients.value = '';
+    rindasVieta.replaceChildren();
+    pievienotRindu();
+    saglabatPoga.textContent = 'Izveidot pasūtījumu';
+    atceltPoga.classList.add('hide');
+  }
+ 
+  function sakumtLabot(r) {
+    labojamais = r;
+    paradit(zina, '');
+    klients.value = r.klients;
+    rindasVieta.replaceChildren();
+    r.preces.forEach((p) => pievienotRindu(p.prece_id, p.daudzums));
+    if (r.preces.length === 0) pievienotRindu();
+    saglabatPoga.textContent = `Saglabāt pasūtījumu Nr. ${r.id}`;
+    atceltPoga.classList.remove('hide');
+    forma.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+ 
+  function nolasitDatus() {
+    const rindas = [...rindasVieta.querySelectorAll('.orderLine')].map((r) => ({
+      prece_id: r.querySelector('select').value,
+      daudzums: r.querySelector('input').value,
+    }));
+    return { klients: klients.value.trim(), preces: rindas };
+  }
+ 
+  const kolonnas = [
+    { key: 'id', label: 'Nr.' },
+    { key: 'klients', label: 'Klients' },
+    { key: 'statuss', label: 'Statuss', format: (v) => STATUSU_NOSAUKUMI[v] || v },
+    { key: 'preces', label: 'Preces', format: (v) => v.map((p) => `${p.artikuls} × ${p.daudzums}`).join(', ') },
+    { key: 'izveidoja', label: 'Izveidoja' },
+    { key: 'izveidots', label: 'Izveidots' },
+  ];
+ 
+  function zimetTabulu() {
+    tabulasVieta.replaceChildren(
+      tabula(kolonnas, pasutijumi, (r) => {
+        const pogas = r.nakamie.map((jaunais) =>
+          izveidotPogu(
+            STATUSU_DARBIBAS[jaunais] || jaunais,
+            jaunais === 'atcelts' ? 'rowBtn dangerBtn' : 'rowBtn',
+            () => mainitStatusu(r, jaunais)
+          )
+        );
+        if (r.statuss === 'jauns') pogas.push(izveidotPogu('Rediģēt', 'rowBtn', () => sakumtLabot(r)));
+        if (r.statuss === 'jauns' || r.statuss === 'atcelts') {
+          pogas.push(izveidotPogu('Dzēst', 'rowBtn dangerBtn', () => dzest(r)));
+        }
+        return pogas;
+      })
+    );
+  }
+ 
+  async function ieladet() {
+    try {
+      preces = await api('/api/preces');
+      rindasVieta.querySelectorAll('select').forEach((sel) => aizpilditPreces(sel, sel.value));
+      pasutijumi = await api('/api/pasutijumi');
+      zimetTabulu();
+    } catch (err) {
+      paradit(zina, err.message, 'kluda');
+    }
+  }
+ 
+  async function mainitStatusu(r, jaunais) {
+    if (jaunais === 'atcelts' && !confirm(`Vai atcelt pasūtījumu Nr. ${r.id}?`)) return;
+    try {
+      const atbilde = await api(`/api/pasutijumi/${r.id}/statuss`, 'PUT', { statuss: jaunais });
+      paradit(zina, atbilde.zinojums, 'veiksme');
+      if (labojamais && labojamais.id === r.id) atceltLabot();
+      await ieladet();
+    } catch (err) {
+      paradit(zina, err.message, 'kluda');
+      await ieladet(); // statuss varēja mainīties, atsvaidzina sarakstu
+    }
+  }
+ 
+  async function dzest(r) {
+    if (!confirm(`Vai dzēst pasūtījumu Nr. ${r.id} (${r.klients})?`)) return;
+    try {
+      const atbilde = await api(`/api/pasutijumi/${r.id}`, 'DELETE');
+      paradit(zina, atbilde.zinojums, 'veiksme');
+      if (labojamais && labojamais.id === r.id) atceltLabot();
+      await ieladet();
+    } catch (err) {
+      paradit(zina, err.message, 'kluda');
+    }
+  }
+ 
+  forma.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    paradit(zina, '');
+    const dati = nolasitDatus();
+    if (dati.preces.length === 0) {
+      return paradit(zina, 'Pievienojiet vismaz vienu preci', 'kluda');
+    }
+    try {
+      const url = labojamais ? `/api/pasutijumi/${labojamais.id}` : '/api/pasutijumi';
+      const atbilde = await api(url, labojamais ? 'PUT' : 'POST', dati);
+      paradit(zina, atbilde.zinojums || 'Saglabāts', 'veiksme');
+      atceltLabot();
+      await ieladet();
+    } catch (err) {
+      paradit(zina, err.message, 'kluda');
+    }
+  });
+ 
+  atceltLabot();
+  ielades[sadalasId] = ieladet;
+}
+ 
+izveidotPasutijumus('placeOrder');
  
 // ---------- Pārskati (katrai lomai sava sadaļa) ----------
 // Serveris pats atgriež tikai tos pārskatus, kas atļauti pieslēgtajai lomai.
  
-function izveidotParskatus(sadalasId) {
+function izveidotParskatus(sadalasId, opcijas = {}) {
   const sadala = $(sadalasId);
   if (!sadala) return;
   const pogas = sadala.querySelector('.reportButtons');
@@ -415,6 +629,7 @@ function izveidotParskatus(sadalasId) {
     try {
       const saraksts = await api('/api/parskati');
       pogas.replaceChildren(...saraksts.map((p) => izveidotPogu(p.nosaukums, 'rowBtn', () => raditParskatu(p))));
+      if (opcijas.atverPirmo && saraksts.length > 0) await raditParskatu(saraksts[0]);
     } catch (err) {
       paradit(izvade, err.message, 'kluda');
     }
@@ -425,3 +640,27 @@ function izveidotParskatus(sadalasId) {
  
 izveidotParskatus('reportsWorker'); // noliktavas darbinieks
 izveidotParskatus('reportsSorter'); // plauktu kārtotājs
+ 
+// ---------- Sākums administratoram: noliktavas darbības atskaites ----------
+// Administratoram sadaļa "Sākums" rāda atskaites (pirmā atveras uzreiz), citām lomām tā paliek tukša.
+ 
+izveidotParskatus('adminHome', { atverPirmo: true });
+ 
+function paraditAdminSakumu() {
+  if (manaLoma !== 'administrators') return;
+  showSection('adminHome');
+  if (ielades.adminHome) ielades.adminHome();
+}
+ 
+// Nospiežot "Sākums": app.js jau paslēpa visas sadaļas, administratoram parāda atskaites
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-section="home"]')) paraditAdminSakumu();
+});
+ 
+// Pēc pieslēgšanās (lapas ielādē) administratoram uzreiz parāda Sākumu ar atskaitēm
+api('/api/me')
+  .then((atbilde) => {
+    manaLoma = atbilde.lietotajs.loma;
+    paraditAdminSakumu();
+  })
+  .catch(() => {}); // ja nav pieslēgts, app.js pats novirza uz pieslēgšanās lapu

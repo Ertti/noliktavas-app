@@ -203,13 +203,13 @@ button {
     color: crimson;
 }
 
-@media (min-width: 771px) {
+@media (min-width: 871px) {
     #menu {
         display: none;
     }
 }
 
-@media (max-width: 770px) {
+@media (max-width: 870px) {
     #signin {
         width: 90%;
     }
@@ -280,3 +280,9 @@ th, td {
 .rowBtn { padding: 3px 8px; }
 .dangerBtn { background-color: rgb(234, 84, 84); }
 .csvLink { display: inline-block; margin: 5px 0 10px; }
+ 
+/* Pasūtījuma preču rindas: prece + daudzums + noņemt */
+.orderLine { display: flex; gap: 8px; align-items: center; }
+.orderLine select { flex: 3 1 0; min-width: 0; width: auto; margin: 5px 0; }
+.orderLine input { flex: 1 1 0; min-width: 70px; width: auto; margin: 5px 0; }
+.orderLine button { margin: 0; }

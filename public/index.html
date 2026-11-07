@@ -25,7 +25,8 @@
                     <li class="hide" data-roles="administrators"><button class="navButton" data-section="users">Lietotāji</button></li>
                     <li class="hide" data-roles="plauktu_kartotajs"><button class="navButton" data-section="moveProducts">Izvietot preces</button></li>
                     <li class="hide" data-roles="noliktavas_darbinieks"><button class="navButton" data-section="placeOrder">Veikt pasūtijumu</button></li>
-                    <li class="hide" data-roles="plauktu_kartotajs,noliktavas_darbinieks"><button class="navButton" data-section="reports">Sagatavot atskaiti</button></li>
+                    <li class="hide" data-roles="noliktavas_darbinieks"><button class="navButton" data-section="reportsWorker">Sagatavot atskaiti</button></li>
+                    <li class="hide" data-roles="plauktu_kartotajs"><button class="navButton" data-section="reportsSorter">Sagatavot atskaiti</button></li>
                     <li class="hide" data-roles="plauktu_kartotajs"><button class="navButton" data-section="dataEntry">Datu ievade</button></li>
                 </ul>
             </nav>
@@ -40,7 +41,8 @@
                         <li class="hide" data-roles="administrators"><button class="navButton" data-section="users">Lietotāji</button></li>
                         <li class="hide" data-roles="plauktu_kartotajs"><button class="navButton" data-section="moveProducts">Izvietot preces</button></li>
                         <li class="hide" data-roles="noliktavas_darbinieks"><button class="navButton" data-section="placeOrder">Veikt pasūtijumu</button></li>
-                        <li class="hide" data-roles="plauktu_kartotajs,noliktavas_darbinieks"><button class="navButton" data-section="reports">Sagatavot atskaiti</button></li>
+                        <li class="hide" data-roles="noliktavas_darbinieks"><button class="navButton" data-section="reportsWorker">Sagatavot atskaiti</button></li>
+                        <li class="hide" data-roles="plauktu_kartotajs"><button class="navButton" data-section="reportsSorter">Sagatavot atskaiti</button></li>
                         <li class="hide" data-roles="plauktu_kartotajs"><button class="navButton" data-section="dataEntry">Datu ievade</button></li>
                     </ul>
                 </div>
@@ -69,6 +71,17 @@
                 <section id="users" class="panel hide">
                     <h2>Lietotāji</h2>
                     <div class="crud"></div>
+                </section>
+
+                 <section id="placeOrder" class="panel hide">
+                    <h2>Pasūtījumi</h2>
+                    <div class="crud"></div>
+                </section>
+
+                <section id="adminHome" class="panel hide">
+                    <h2>Noliktavas darbības atskaites</h2>
+                    <div class="reportButtons"></div>
+                    <div class="reportOut"></div>
                 </section>
 
                 <section id="reportsWorker" class="panel hide">
