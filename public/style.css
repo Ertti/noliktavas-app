@@ -174,7 +174,7 @@ select {
     height: 30px;
     text-align: center;
     font-weight: bold;
-    margin: 10px 0;
+    margin: 10px;
 }
 
 select option {
@@ -249,18 +249,55 @@ button {
     .header {
         grid-template-columns: 1fr auto 1fr;
     }
+
+    main {
+        padding: 10px;
+    }
+ 
+    table, tbody, tr, td {
+        display: block;
+    }
+ 
+    thead {
+        display: none;
+    }
+ 
+    tr {
+        margin-bottom: 10px;
+        padding: 6px;
+        border: 1px solid rgba(0, 0, 0, 0.3);
+        border-radius: 10px;
+    }
+ 
+    td {
+        border: none;
+        padding: 3px 4px;
+    }
+ 
+    td[data-label]::before {
+        content: attr(data-label) ": ";
+        font-weight: bold;
+    }
 }
 
 .kluda { color: crimson; }
+
 .veiksme { color: darkgreen; }
- 
+
 .crud button,
 .reportButtons button { margin: 3px; }
- 
-.crudForm { width: 100%; margin: 10px 0; }
+
+.crudForm {
+    width: 100%;
+    margin: 10px 0;
+}
+
 .crudForm input,
 .crudForm select,
-.crudForm textarea { margin: 5px 0 10px; }
+.crudForm textarea {
+    margin: 5px 0 10px;
+}
+
 .crudForm textarea {
     width: 100%;
     border: none;
@@ -268,21 +305,56 @@ button {
     background-color: rgb(149, 234, 149);
     padding: 5px;
 }
- 
-.tableWrap { overflow-x: auto; margin-top: 10px; }
-table { width: 100%; border-collapse: collapse; }
+
+.tableWrap {
+    overflow-x: auto;
+    margin-top: 10px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
 th, td {
     padding: 6px 10px;
     text-align: left;
     border-bottom: 1px solid rgba(0, 0, 0, 0.2);
 }
- 
-.rowBtn { padding: 3px 8px; }
-.dangerBtn { background-color: rgb(234, 84, 84); }
-.csvLink { display: inline-block; margin: 5px 0 10px; }
- 
-/* Pasūtījuma preču rindas: prece + daudzums + noņemt */
-.orderLine { display: flex; gap: 8px; align-items: center; }
-.orderLine select { flex: 3 1 0; min-width: 0; width: auto; margin: 5px 0; }
-.orderLine input { flex: 1 1 0; min-width: 70px; width: auto; margin: 5px 0; }
-.orderLine button { margin: 0; }
+
+.rowBtn {
+    padding: 3px 8px;
+}
+
+.dangerBtn {
+    background-color: rgb(234, 84, 84);
+}
+
+.csvLink {
+    display: inline-block;
+    margin: 5px 0 10px;
+}
+
+.orderLine {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.orderLine select {
+    flex: 3 1 0;
+    min-width: 0;
+    width: auto;
+    margin: 5px 0;
+}
+
+.orderLine input {
+    flex: 1 1 0;
+    min-width: 70px;
+    width: auto;
+    margin: 5px 0;
+}
+
+.orderLine button {
+    margin: 0;
+}

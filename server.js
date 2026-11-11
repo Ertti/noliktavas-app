@@ -16,12 +16,12 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME || 'noliktava',
 });
- 
+
 if (!process.env.SESSION_SECRET) {
   console.error('Trūkst SESSION_SECRET failā .env');
   process.exit(1);
 }
- 
+
 app.use(express.json({ limit: '10kb' }));
 app.use(
   session({
@@ -29,27 +29,22 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      httpOnly: true,                                   // JS nevar nolasīt sīkdatni
-      sameSite: 'strict',                               // aizsardzība pret CSRF
-      secure: process.env.NODE_ENV === 'production',    // HTTPS produkcijā
-      maxAge: 1000 * 60 * 60 * 8,                       // 8 stundas
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 1000 * 60 * 60 * 8,
     },
   })
 );
 
 app.use(express.static('public'));
 
-// Fiktīvs hash, lai laiks būtu vienāds arī tad, ja lietotājs neeksistē
 const DUMMY_HASH = bcrypt.hashSync('fiktiva-parole', 10);
- 
+
 function kluda(res, status, zinojums) {
   return res.status(status).json({ kluda: zinojums });
 }
- 
-// ---------- Starpprogrammatūra (middleware) ----------
 
-// Kontu un lomu katrā pieprasījumā pārbauda datubāzē, lai dzēsts vai pārslēgts lietotājs
-// uzreiz zaudē tiesības (nevis darbojas ar veco lomu līdz sesijas beigām)
 async function requireLogin(req, res, next) {
   try {
     const sesija = req.session.lietotajs;
@@ -75,7 +70,7 @@ async function requireLogin(req, res, next) {
     kluda(res, 500, 'Servera kļūda, mēģiniet vēlreiz');
   }
 }
- 
+
 function requireRole(...atlautasLomas) {
   return (req, res, next) =>
     requireLogin(req, res, () => {
@@ -85,9 +80,7 @@ function requireRole(...atlautasLomas) {
       next();
     });
 }
- 
-// ---------- Pieslēgšanās ----------
- 
+
 app.post('/api/login', async (req, res) => {
   try {
     const { lietotajvards, parole } = req.body || {};
@@ -110,12 +103,10 @@ app.post('/api/login', async (req, res) => {
     const lietotajs = result.rows[0];
     const derigs = await bcrypt.compare(parole, lietotajs ? lietotajs.parole : DUMMY_HASH);
  
-    // Viena un tā pati ziņa gan nepareizam vārdam, gan parolei (neatklāj, kas ir nepareizs)
     if (!lietotajs || !derigs) {
       return kluda(res, 401, 'Nepareizs lietotājvārds vai parole');
     }
  
-    // Jauns sesijas ID pēc pieslēgšanās (aizsardzība pret session fixation)
     req.session.regenerate((err) => {
       if (err) return kluda(res, 500, 'Servera kļūda, mēģiniet vēlreiz');
       req.session.lietotajs = {
@@ -131,7 +122,7 @@ app.post('/api/login', async (req, res) => {
     kluda(res, 500, 'Servera kļūda, mēģiniet vēlreiz');
   }
 });
- 
+
 app.post('/api/logout', requireLogin, (req, res) => {
   req.session.destroy((err) => {
     if (err) return kluda(res, 500, 'Neizdevās atslēgties');
@@ -139,15 +130,11 @@ app.post('/api/logout', requireLogin, (req, res) => {
     res.json({ zinojums: 'Atslēgšanās veiksmīga' });
   });
 });
- 
-// Kas pašlaik ir pieslēdzies (frontendam, lai zinātu, ko rādīt)
+
 app.get('/api/me', requireLogin, (req, res) => {
   res.json({ lietotajs: req.session.lietotajs });
 });
- 
-// ---------- Lietotāju pārvaldība (tikai administrators) ----------
- 
-// Lomu saraksts (izvēlnei lietotāja izveides formā)
+
 app.get('/api/lomas', requireRole('administrators'), async (req, res) => {
   try {
     const result = await pool.query('SELECT id, nosaukums FROM lomas ORDER BY id');
@@ -157,13 +144,11 @@ app.get('/api/lomas', requireRole('administrators'), async (req, res) => {
     kluda(res, 500, 'Servera kļūda, mēģiniet vēlreiz');
   }
 });
- 
-// Jauna lietotāja izveide - TIKAI administrators
+
 app.post('/api/lietotaji', requireRole('administrators'), async (req, res) => {
   try {
     const { lietotajvards, parole, vards_uzvards, loma_id } = req.body || {};
- 
-    // Validācija
+
     if (typeof lietotajvards !== 'string' || !/^[\p{L}0-9_.-]{3,50}$/u.test(lietotajvards.trim())) {
       return kluda(res, 400, 'Lietotājvārds: 3-50 simboli (burti, arī garumzīmes, cipari, _ . -)');
     }
@@ -177,14 +162,14 @@ app.post('/api/lietotaji', requireRole('administrators'), async (req, res) => {
     if (!Number.isInteger(lomaId) || lomaId <= 0) {
       return kluda(res, 400, 'Izvēlieties lomu');
     }
- 
+
     const role = await pool.query('SELECT id FROM lomas WHERE id = $1', [lomaId]);
     if (role.rowCount === 0) {
       return kluda(res, 400, 'Izvēlētā loma neeksistē');
     }
- 
+
     const hash = await bcrypt.hash(parole, 10);
- 
+
     const result = await pool.query(
       `INSERT INTO lietotaji (lietotajvards, parole, vards_uzvards, loma_id)
        VALUES ($1, $2, $3, $4)
@@ -202,14 +187,9 @@ app.post('/api/lietotaji', requireRole('administrators'), async (req, res) => {
   }
 });
 
-// ====================================================
-// LIETOTĀJU REDIĢĒŠANA/DZĒŠANA, NOLIKTAVAS DATI, PASŪTĪJUMI UN PĀRSKATI
-// ====================================================
-
 const STAVOKLI = ['labs', 'bojats', 'karantina'];
 const MAKS_INT = 2147483647;
 
-// Pasūtījuma izpildes process: no kura statusa uz kuru drīkst pāriet
 const STATUSU_PLUSMA = {
   jauns: ['komplektesana', 'atcelts'],
   komplektesana: ['nosutits', 'atcelts'],
@@ -225,14 +205,13 @@ const STATUSU_NOSAUKUMI = {
   atcelts: 'Atcelts',
 };
 
-// ---------- Pārskati ----------
 const PARSKATI = {
   atlikumi: {
     nosaukums: 'Preču atlikumi',
     lomas: ['administrators', 'noliktavas_darbinieks'],
-    sql: 'SELECT artikuls, nosaukums, atlikums FROM v_atlikumi ORDER BY artikuls',
+    sql: 'SELECT preces_kods, nosaukums, atlikums FROM v_atlikumi ORDER BY preces_kods',
     kolonnas: [
-      { key: 'artikuls', label: 'Artikuls' },
+      { key: 'preces_kods', label: 'Preces kods' },
       { key: 'nosaukums', label: 'Nosaukums' },
       { key: 'atlikums', label: 'Atlikums (labs)' },
     ],
@@ -240,16 +219,27 @@ const PARSKATI = {
   izvietojums: {
     nosaukums: 'Preču izvietojums un stāvoklis',
     lomas: ['administrators', 'noliktavas_darbinieks', 'plauktu_kartotajs'],
-    sql: `SELECT artikuls, nosaukums, vieta, daudzums, stavoklis,
+    sql: `SELECT preces_kods, nosaukums, vieta, daudzums, stavoklis,
                  to_char(atjaunots, 'YYYY-MM-DD HH24:MI') AS atjaunots
-          FROM v_izvietojuma_parskats ORDER BY vieta, artikuls`,
+          FROM v_izvietojuma_parskats ORDER BY vieta, preces_kods`,
     kolonnas: [
-      { key: 'artikuls', label: 'Artikuls' },
+      { key: 'preces_kods', label: 'Preces kods' },
       { key: 'nosaukums', label: 'Nosaukums' },
       { key: 'vieta', label: 'Vieta' },
       { key: 'daudzums', label: 'Daudzums' },
       { key: 'stavoklis', label: 'Stāvoklis' },
       { key: 'atjaunots', label: 'Atjaunots' },
+    ],
+  },
+  stavoklis: {
+    nosaukums: 'Preču stāvokļa kopsavilkums',
+    lomas: ['administrators', 'noliktavas_darbinieks', 'plauktu_kartotajs'],
+    sql: `SELECT stavoklis, COUNT(*) AS pozicijas, COALESCE(SUM(daudzums), 0) AS daudzums
+          FROM izvietojums GROUP BY stavoklis ORDER BY stavoklis`,
+    kolonnas: [
+      { key: 'stavoklis', label: 'Stāvoklis' },
+      { key: 'pozicijas', label: 'Pozīcijas' },
+      { key: 'daudzums', label: 'Daudzums kopā' },
     ],
   },
   pasutijumi: {
@@ -267,9 +257,9 @@ const PARSKATI = {
     ],
   },
   vesture: {
-    nosaukums: 'Izvietojuma izmaiņu vēsture (pēdējās 500)',
+    nosaukums: 'Izvietojuma izmaiņu vēsture',
     lomas: ['administrators', 'noliktavas_darbinieks', 'plauktu_kartotajs'],
-    sql: `SELECT to_char(h.laiks, 'YYYY-MM-DD HH24:MI') AS laiks, p.artikuls, p.nosaukums AS prece,
+    sql: `SELECT to_char(h.laiks, 'YYYY-MM-DD HH24:MI') AS laiks, p.preces_kods, p.nosaukums AS prece,
                  h.darbiba, vn.kods AS no_vietas, vu.kods AS uz_vietu, h.daudzums,
                  l.lietotajvards AS lietotajs
           FROM izvietojuma_vesture h
@@ -281,7 +271,7 @@ const PARSKATI = {
           LIMIT 500`,
     kolonnas: [
       { key: 'laiks', label: 'Laiks' },
-      { key: 'artikuls', label: 'Artikuls' },
+      { key: 'preces_kods', label: 'Preces kods' },
       { key: 'prece', label: 'Prece' },
       { key: 'darbiba', label: 'Darbība' },
       { key: 'no_vietas', label: 'No vietas' },
@@ -292,7 +282,6 @@ const PARSKATI = {
   },
 };
 
-// CSV lauks ar pēdiņām; teksta laukiem, kas sākas ar = + - @, pievieno ' (aizsardzība pret Excel formulām)
 function csvLauks(v) {
   let s = v === null || v === undefined ? '' : String(v);
   if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s)) s = "'" + s;
@@ -303,14 +292,12 @@ const admin = requireRole('administrators');
 const adminVaiDarbinieks = requireRole('administrators', 'noliktavas_darbinieks');
 const visi = requireRole('administrators', 'noliktavas_darbinieks', 'plauktu_kartotajs');
 const darbinieks = requireRole('noliktavas_darbinieks');
-
-// ---------- Palīgfunkcijas ----------
+const adminVaiKartotajs = requireRole('administrators', 'plauktu_kartotajs');
 
 function teksts(v, maks) {
   return typeof v === 'string' && v.trim().length > 0 && v.trim().length <= maks;
 }
 
-// Atgriež skaitli vai null, ja vērtība nav derīga
 function skaitlis(v, { min = 0, maks = Infinity, vesels = false } = {}) {
   if (typeof v !== 'string' && typeof v !== 'number') return null;
   if (typeof v === 'string' && v.trim() === '') return null;
@@ -323,7 +310,7 @@ function skaitlis(v, { min = 0, maks = Infinity, vesels = false } = {}) {
 function idNoUrl(req, res) {
   const id = skaitlis(req.params.id, { min: 1, maks: MAKS_INT, vesels: true });
   if (id === null) kluda(res, 400, 'Nederīgs ID');
-  return id; // null, ja nederīgs (atbilde jau nosūtīta)
+  return id;
 }
 
 function dbKluda(res, err, zinojumi = {}) {
@@ -334,7 +321,6 @@ function dbKluda(res, err, zinojumi = {}) {
   return kluda(res, 500, 'Servera kļūda, mēģiniet vēlreiz');
 }
 
-// Vairākus SQL vaicājumus izpilda kā vienu veselu (vai visi, vai neviens)
 async function tranzakcija(darbs) {
   const client = await pool.connect();
   try {
@@ -349,10 +335,6 @@ async function tranzakcija(darbs) {
     client.release();
   }
 }
-
-// ====================================================
-// LIETOTĀJI (tikai administrators); izveide ir server.js
-// ====================================================
 
 app.get('/api/lietotaji', admin, async (req, res) => {
   try {
@@ -387,7 +369,6 @@ app.put('/api/lietotaji/:id', admin, async (req, res) => {
       return kluda(res, 400, 'Parolei jābūt 8-72 simbolus garai');
     }
 
-    // Savu lomu mainīt nedrīkst, lai sistēmā vienmēr paliktu vismaz viens administrators
     if (id === req.session.lietotajs.id && lomaId !== req.session.lietotajs.loma_id) {
       return kluda(res, 400, 'Savu lomu mainīt nedrīkst');
     }
@@ -422,8 +403,6 @@ app.delete('/api/lietotaji/:id', admin, async (req, res) => {
     if (id === req.session.lietotajs.id) {
       return kluda(res, 400, 'Savu kontu dzēst nedrīkst');
     }
-    // Tabulās izvietojums, pasutijumi un izvietojuma_vesture atsauce uz lietotāju nav ON DELETE SET NULL,
-    // tāpēc to atbrīvo ar roku (ieraksti paliek, bet bez autora), un tikai tad dzēš lietotāju
     const atrasts = await tranzakcija(async (c) => {
       await c.query('UPDATE izvietojums SET atjaunoja = NULL WHERE atjaunoja = $1', [id]);
       await c.query('UPDATE pasutijumi SET izveidoja = NULL WHERE izveidoja = $1', [id]);
@@ -438,25 +417,21 @@ app.delete('/api/lietotaji/:id', admin, async (req, res) => {
   }
 });
 
-// ====================================================
-// PRECES
-// ====================================================
-
 function validetPreci(b) {
-  const { artikuls, nosaukums, apraksts, cena } = b || {};
-  if (!teksts(artikuls, 50)) return { kluda: 'Norādiet artikulu (līdz 50 simboliem)' };
+  const { preces_kods, nosaukums, apraksts, cena } = b || {};
+  if (!teksts(preces_kods, 50)) return { kluda: 'Norādiet preces kodu (līdz 50 simboliem)' };
   if (!teksts(nosaukums, 150)) return { kluda: 'Norādiet nosaukumu (līdz 150 simboliem)' };
   if (apraksts !== undefined && apraksts !== null && (typeof apraksts !== 'string' || apraksts.length > 1000)) {
     return { kluda: 'Apraksts ir pārāk garš (līdz 1000 simboliem)' };
   }
   const c = skaitlis(cena, { min: 0, maks: 99999999 });
   if (c === null) return { kluda: 'Cenai jābūt skaitlim, kas nav negatīvs' };
-  return { dati: [artikuls.trim(), nosaukums.trim(), (apraksts || '').trim() || null, c] };
+  return { dati: [preces_kods.trim(), nosaukums.trim(), (apraksts || '').trim() || null, c] };
 }
 
 app.get('/api/preces', visi, async (req, res) => {
   try {
-    const r = await pool.query('SELECT id, artikuls, nosaukums, apraksts, cena FROM preces ORDER BY artikuls');
+    const r = await pool.query('SELECT id, preces_kods, nosaukums, apraksts, cena FROM preces ORDER BY preces_kods');
     res.json(r.rows);
   } catch (err) {
     dbKluda(res, err);
@@ -467,10 +442,10 @@ app.post('/api/preces', adminVaiDarbinieks, async (req, res) => {
   const v = validetPreci(req.body);
   if (v.kluda) return kluda(res, 400, v.kluda);
   try {
-    await pool.query('INSERT INTO preces (artikuls, nosaukums, apraksts, cena) VALUES ($1, $2, $3, $4)', v.dati);
+    await pool.query('INSERT INTO preces (preces_kods, nosaukums, apraksts, cena) VALUES ($1, $2, $3, $4)', v.dati);
     res.status(201).json({ zinojums: 'Prece pievienota' });
   } catch (err) {
-    dbKluda(res, err, { dublikats: 'Prece ar šādu artikulu jau eksistē' });
+    dbKluda(res, err, { dublikats: 'Prece ar šādu preces kodu jau eksistē' });
   }
 });
 
@@ -481,13 +456,13 @@ app.put('/api/preces/:id', adminVaiDarbinieks, async (req, res) => {
   if (v.kluda) return kluda(res, 400, v.kluda);
   try {
     const r = await pool.query(
-      'UPDATE preces SET artikuls = $1, nosaukums = $2, apraksts = $3, cena = $4 WHERE id = $5',
+      'UPDATE preces SET preces_kods = $1, nosaukums = $2, apraksts = $3, cena = $4 WHERE id = $5',
       [...v.dati, id]
     );
     if (r.rowCount === 0) return kluda(res, 404, 'Prece nav atrasta');
     res.json({ zinojums: 'Prece atjaunināta' });
   } catch (err) {
-    dbKluda(res, err, { dublikats: 'Prece ar šādu artikulu jau eksistē' });
+    dbKluda(res, err, { dublikats: 'Prece ar šādu preces kodu jau eksistē' });
   }
 });
 
@@ -503,10 +478,6 @@ app.delete('/api/preces/:id', admin, async (req, res) => {
   }
 });
 
-// ====================================================
-// NOLIKTAVAS VIETAS
-// ====================================================
-
 app.get('/api/vietas', visi, async (req, res) => {
   try {
     const r = await pool.query('SELECT id, kods FROM vietas ORDER BY kods');
@@ -516,7 +487,7 @@ app.get('/api/vietas', visi, async (req, res) => {
   }
 });
 
-app.post('/api/vietas', admin, async (req, res) => {
+app.post('/api/vietas', adminVaiKartotajs, async (req, res) => {
   const { kods } = req.body || {};
   if (!teksts(kods, 30)) return kluda(res, 400, 'Norādiet vietas kodu (līdz 30 simboliem)');
   try {
@@ -527,7 +498,7 @@ app.post('/api/vietas', admin, async (req, res) => {
   }
 });
 
-app.put('/api/vietas/:id', admin, async (req, res) => {
+app.put('/api/vietas/:id', adminVaiKartotajs, async (req, res) => {
   const id = idNoUrl(req, res);
   if (id === null) return;
   const { kods } = req.body || {};
@@ -545,7 +516,6 @@ app.delete('/api/vietas/:id', admin, async (req, res) => {
   const id = idNoUrl(req, res);
   if (id === null) return;
   try {
-    // Vietu ar precēm dzēst nedrīkst; vēstures atsauces uz to atbrīvo ar roku (nav ON DELETE SET NULL)
     const rezultats = await tranzakcija(async (c) => {
       const ir = await c.query('SELECT 1 FROM izvietojums WHERE vieta_id = $1 LIMIT 1', [id]);
       if (ir.rowCount > 0) return 'aiznemta';
@@ -563,10 +533,6 @@ app.delete('/api/vietas/:id', admin, async (req, res) => {
     dbKluda(res, err, { saistits: 'Vietu nevar dzēst, jo tajā ir preces. Vispirms noņemiet izvietojumu.' });
   }
 });
-
-// ====================================================
-// IZVIETOJUMS (katra izmaiņa tiek ierakstīta arī vēsturē)
-// ====================================================
 
 function validetIzvietojumu(b, jauns) {
   const { prece_id, vieta_id, daudzums, stavoklis } = b || {};
@@ -589,13 +555,13 @@ app.get('/api/izvietojums', visi, async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT i.id, i.prece_id, i.vieta_id,
-              p.artikuls || ' - ' || p.nosaukums AS prece, v.kods AS vieta,
+              p.preces_kods || ' - ' || p.nosaukums AS prece, v.kods AS vieta,
               i.daudzums, i.stavoklis,
               to_char(i.atjaunots, 'YYYY-MM-DD HH24:MI') AS atjaunots
        FROM izvietojums i
        JOIN preces p ON p.id = i.prece_id
        JOIN vietas v ON v.id = i.vieta_id
-       ORDER BY v.kods, p.artikuls`
+       ORDER BY v.kods, p.preces_kods`
     );
     res.json(r.rows);
   } catch (err) {
@@ -603,7 +569,7 @@ app.get('/api/izvietojums', visi, async (req, res) => {
   }
 });
 
-app.post('/api/izvietojums', admin, async (req, res) => {
+app.post('/api/izvietojums', adminVaiKartotajs, async (req, res) => {
   const v = validetIzvietojumu(req.body, true);
   if (v.kluda) return kluda(res, 400, v.kluda);
   const lietotajsId = req.session.lietotajs.id;
@@ -626,7 +592,7 @@ app.post('/api/izvietojums', admin, async (req, res) => {
   }
 });
 
-app.put('/api/izvietojums/:id', admin, async (req, res) => {
+app.put('/api/izvietojums/:id', adminVaiKartotajs, async (req, res) => {
   const id = idNoUrl(req, res);
   if (id === null) return;
   const v = validetIzvietojumu(req.body, false);
@@ -657,7 +623,7 @@ app.put('/api/izvietojums/:id', admin, async (req, res) => {
   }
 });
 
-app.delete('/api/izvietojums/:id', admin, async (req, res) => {
+app.delete('/api/izvietojums/:id', adminVaiKartotajs, async (req, res) => {
   const id = idNoUrl(req, res);
   if (id === null) return;
   const lietotajsId = req.session.lietotajs.id;
@@ -683,19 +649,12 @@ app.delete('/api/izvietojums/:id', admin, async (req, res) => {
   }
 });
 
-// ====================================================
-// PASŪTĪJUMI (noliktavas darbinieks)
-// Statusu maina pa soļiem (STATUSU_PLUSMA); rediģēt var tikai jaunu pasūtījumu;
-// dzēst var tikai jaunu vai atceltu pasūtījumu.
-// ====================================================
-
 function validetPasutijumu(b) {
   const { klients, preces } = b || {};
   if (!teksts(klients, 150)) return { kluda: 'Norādiet klientu (līdz 150 simboliem)' };
   if (!Array.isArray(preces) || preces.length === 0) return { kluda: 'Pievienojiet vismaz vienu preci' };
   if (preces.length > 100) return { kluda: 'Pasūtījumā ir pārāk daudz pozīciju (maksimums 100)' };
 
-  // Vienādas preces apvieno, saskaitot daudzumus
   const kopa = new Map();
   for (const rinda of preces) {
     const preceId = skaitlis(rinda && rinda.prece_id, { min: 1, maks: MAKS_INT, vesels: true });
@@ -723,9 +682,9 @@ app.get('/api/pasutijumi', darbinieks, async (req, res) => {
               to_char(o.izveidots, 'YYYY-MM-DD HH24:MI') AS izveidots,
               l.lietotajvards AS izveidoja,
               COALESCE(
-                json_agg(json_build_object('prece_id', pp.prece_id, 'artikuls', p.artikuls,
+                json_agg(json_build_object('prece_id', pp.prece_id, 'preces_kods', p.preces_kods,
                                            'nosaukums', p.nosaukums, 'daudzums', pp.daudzums)
-                         ORDER BY p.artikuls) FILTER (WHERE pp.id IS NOT NULL),
+                         ORDER BY p.preces_kods) FILTER (WHERE pp.id IS NOT NULL),
                 '[]'::json) AS preces
        FROM pasutijumi o
        LEFT JOIN pasutijuma_preces pp ON pp.pasutijums_id = o.id
@@ -758,7 +717,6 @@ app.post('/api/pasutijumi', darbinieks, async (req, res) => {
   }
 });
 
-// Rediģēšana: tikai ar statusu "jauns"
 app.put('/api/pasutijumi/:id', darbinieks, async (req, res) => {
   const id = idNoUrl(req, res);
   if (id === null) return;
@@ -784,7 +742,6 @@ app.put('/api/pasutijumi/:id', darbinieks, async (req, res) => {
   }
 });
 
-// Statusa maiņa pa izpildes soļiem
 app.put('/api/pasutijumi/:id/statuss', darbinieks, async (req, res) => {
   const id = idNoUrl(req, res);
   if (id === null) return;
@@ -815,7 +772,6 @@ app.put('/api/pasutijumi/:id/statuss', darbinieks, async (req, res) => {
   }
 });
 
-// Dzēšana: tikai jaunu vai atceltu pasūtījumu
 app.delete('/api/pasutijumi/:id', darbinieks, async (req, res) => {
   const id = idNoUrl(req, res);
   if (id === null) return;
@@ -836,10 +792,6 @@ app.delete('/api/pasutijumi/:id', darbinieks, async (req, res) => {
     dbKluda(res, err);
   }
 });
-
-// ====================================================
-// PĀRSKATI (JSON vai CSV ar ?csv=1)
-// ====================================================
 
 app.get('/api/parskati', visi, (req, res) => {
   const loma = req.session.lietotajs.loma;
@@ -864,7 +816,6 @@ app.get('/api/parskati/:id', visi, async (req, res) => {
     const r = await pool.query(p.sql);
 
     if (req.query.csv === '1') {
-      // Semikols atdala laukus, jo latviešu Excel to sagaida; BOM nodrošina pareizas garumzīmes
       const rindas = [
         p.kolonnas.map((k) => csvLauks(k.label)).join(';'),
         ...r.rows.map((rinda) => p.kolonnas.map((k) => csvLauks(rinda[k.key])).join(';')),
@@ -881,11 +832,8 @@ app.get('/api/parskati/:id', visi, async (req, res) => {
   }
 });
 
- 
-// ---------- Neatrasts un kļūdu apstrāde ----------
- 
 app.use('/api', (req, res) => kluda(res, 404, 'Resurss nav atrasts'));
- 
+
 app.use((err, req, res, next) => {
   if (err.type === 'entity.parse.failed') {
     return kluda(res, 400, 'Nederīgi dati (JSON kļūda)');

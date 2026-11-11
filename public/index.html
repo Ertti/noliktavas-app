@@ -20,7 +20,7 @@
             <nav>
                 <ul>
                     <li><button class="navButton" data-section="home">Sākums</button></li>
-                    <li class="hide" data-roles="administrators"><button class="navButton" data-section="addProduct">Pievienot produktu</button></li>
+                    <li class="hide" data-roles="administrators,noliktavas_darbinieks"><button class="navButton" data-section="addProduct">Pievienot produktu</button></li>
                     <li class="hide" data-roles="administrators"><button class="navButton" data-section="adminAddUser">Pievienot lietotāju</button></li>
                     <li class="hide" data-roles="administrators"><button class="navButton" data-section="users">Lietotāji</button></li>
                     <li class="hide" data-roles="plauktu_kartotajs"><button class="navButton" data-section="moveProducts">Izvietot preces</button></li>
@@ -30,74 +30,225 @@
                     <li class="hide" data-roles="plauktu_kartotajs"><button class="navButton" data-section="dataEntry">Datu ievade</button></li>
                 </ul>
             </nav>
-    
+
             <main>
                 <div id="menu" popover>
-                    <ul>
+                    <ul id="menuList">
                         <li class="mobileName"><strong class="name"></strong></li>
-                        <li><button class="navButton" data-section="home">Sākums</button></li>
-                        <li class="hide" data-roles="administrators"><button class="navButton" data-section="addProduct">Pievienot produktu</button></li>
-                        <li class="hide" data-roles="administrators"><button class="navButton" data-section="adminAddUser">Pievienot lietotāju</button></li>
-                        <li class="hide" data-roles="administrators"><button class="navButton" data-section="users">Lietotāji</button></li>
-                        <li class="hide" data-roles="plauktu_kartotajs"><button class="navButton" data-section="moveProducts">Izvietot preces</button></li>
-                        <li class="hide" data-roles="noliktavas_darbinieks"><button class="navButton" data-section="placeOrder">Veikt pasūtijumu</button></li>
-                        <li class="hide" data-roles="noliktavas_darbinieks"><button class="navButton" data-section="reportsWorker">Sagatavot atskaiti</button></li>
-                        <li class="hide" data-roles="plauktu_kartotajs"><button class="navButton" data-section="reportsSorter">Sagatavot atskaiti</button></li>
-                        <li class="hide" data-roles="plauktu_kartotajs"><button class="navButton" data-section="dataEntry">Datu ievade</button></li>
                     </ul>
                 </div>
-                
-                <section id="addProduct" class="panel hide">
+
+                <section id="addProduct" class="panel hide" data-url="/api/preces" data-delete="administrators" data-name="nosaukums">
                     <h2>Pievienot produktu</h2>
-                    <div class="crud"></div>
-                </section>
-
-                <section id="adminAddUser" class="panel hide">
-                    <h2>Izveidot jaunu lietotāju</h2>
-                    <form id="newUserForm">
-                        <label for="jLietotajvards">Lietotājvārds</label>
-                        <input type="text" id="jLietotajvards" required><br>
-                        <label for="jVards">Vārds un uzvārds</label>
-                        <input type="text" id="jVards" required><br>
-                        <label for="jParole">Parole (vismaz 8 simboli)</label>
-                        <input type="password" id="jParole" autocomplete="new-password" required><br>
-                        <label for="jLoma">Loma</label>
-                        <select id="jLoma" required></select><br>
-                        <button type="submit" style="margin-left: 10px;">Izveidot lietotāju</button>
+                    <form class="crudForm">
+                        <label>Preces kods <input name="preces_kods" required maxlength="50"></label>
+                        <label>Nosaukums <input name="nosaukums" required maxlength="150"></label>
+                        <label>Apraksts <textarea name="apraksts" rows="3" maxlength="1000"></textarea></label>
+                        <label>Cena <input type="number" name="cena" required min="0" step="0.01"></label>
+                        <button type="submit">Saglabāt</button>
+                        <button type="button" class="rowBtn cancel hide">Atcelt</button>
                     </form>
-                    <div id="adminMessage"></div>
+                    <p data-msg></p>
+                    <div class="tableWrap">
+                        <table>
+                            <thead><tr>
+                                <th data-key="preces_kods">Preces kods</th>
+                                <th data-key="nosaukums">Nosaukums</th>
+                                <th data-key="apraksts">Apraksts</th>
+                                <th data-key="cena" data-dec="2">Cena</th>
+                                <th>Darbības</th>
+                            </tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </section>
 
-                <section id="users" class="panel hide">
+                <section id="adminAddUser" class="panel hide" data-url="/api/lietotaji">
+                    <h2>Izveidot jaunu lietotāju</h2>
+                    <form class="crudForm">
+                        <label>Lietotājvārds
+                            <input name="lietotajvards" required maxlength="50" pattern="[\p{L}0-9_.\-]{3,50}" title="3-50 simboli: burti (arī garumzīmes), cipari, _ . -">
+                        </label>
+                        <label>Vārds un uzvārds <input name="vards_uzvards" required maxlength="100"></label>
+                        <label>Parole (vismaz 8 simboli) <input type="password" name="parole" required minlength="8" maxlength="72" autocomplete="new-password"></label>
+                        <label>Loma <select name="loma_id" required data-url="/api/lomas" data-label="nosaukums" data-map></select></label>
+                        <button type="submit">Izveidot lietotāju</button>
+                    </form>
+                    <p data-msg></p>
+                </section>
+
+                <section id="users" class="panel hide" data-url="/api/lietotaji" data-edit-only data-name="lietotajvards">
                     <h2>Lietotāji</h2>
-                    <div class="crud"></div>
+                    <form class="crudForm hide">
+                        <label>Lietotājvārds
+                            <input name="lietotajvards" required maxlength="50" pattern="[\p{L}0-9_.\-]{3,50}" title="3-50 simboli: burti (arī garumzīmes), cipari, _ . -">
+                        </label>
+                        <label>Vārds un uzvārds <input name="vards_uzvards" required maxlength="100"></label>
+                        <label>Loma <select name="loma_id" required data-url="/api/lomas" data-label="nosaukums" data-map></select></label>
+                        <label>Jauna parole (atstāt tukšu, lai nemainītu) <input type="password" name="parole" minlength="8" maxlength="72" autocomplete="new-password"></label>
+                        <button type="submit">Saglabāt</button>
+                        <button type="button" class="rowBtn cancel hide">Atcelt</button>
+                    </form>
+                    <p data-msg></p>
+                    <div class="tableWrap">
+                        <table>
+                            <thead><tr>
+                                <th data-key="lietotajvards">Lietotājvārds</th>
+                                <th data-key="vards_uzvards">Vārds un uzvārds</th>
+                                <th data-key="loma" data-map>Loma</th>
+                                <th>Darbības</th>
+                            </tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </section>
 
-                 <section id="placeOrder" class="panel hide">
+                <section id="sorterHome" class="panel hide">
+                    <h2>Preces noliktavā</h2>
+                    <p data-msg></p>
+                    <div class="tableWrap">
+                        <table>
+                            <thead><tr>
+                                <th data-key="preces_kods">Preces kods</th>
+                                <th data-key="nosaukums">Nosaukums</th>
+                                <th data-key="apraksts">Apraksts</th>
+                                <th data-key="atlikums">Atlikums (labs)</th>
+                                <th data-key="izvietojums">Izvietojums</th>
+                            </tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section id="moveProducts" class="panel hide" data-url="/api/izvietojums" data-name="prece">
+                    <h2>Izvietot preces</h2>
+                    <form class="crudForm">
+                        <label>Prece <select name="prece_id" required data-create-only data-url="/api/preces" data-label="preces_kods,nosaukums"></select></label>
+                        <label>Vieta <select name="vieta_id" required data-url="/api/vietas" data-label="kods"></select></label>
+                        <label>Daudzums <input type="number" name="daudzums" required min="0" step="1"></label>
+                        <label>Stāvoklis
+                            <select name="stavoklis" required>
+                                <option value="">- izvēlieties -</option>
+                                <option value="labs">Labs</option>
+                                <option value="bojats">Bojāts</option>
+                                <option value="karantina">Karantīna</option>
+                            </select>
+                        </label>
+                        <button type="submit">Saglabāt</button>
+                        <button type="button" class="rowBtn cancel hide">Atcelt</button>
+                    </form>
+                    <p data-msg></p>
+                    <div class="tableWrap">
+                        <table>
+                            <thead><tr>
+                                <th data-key="prece">Prece</th>
+                                <th data-key="vieta">Vieta</th>
+                                <th data-key="daudzums">Daudzums</th>
+                                <th data-key="stavoklis" data-map>Stāvoklis</th>
+                                <th data-key="atjaunots">Atjaunots</th>
+                                <th>Darbības</th>
+                            </tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <h3>Pēdējās izmaiņas</h3>
+                    <div class="tableWrap">
+                        <table data-url="/api/parskati/vesture" data-path="rindas" data-limit="15">
+                            <thead><tr>
+                                <th data-key="laiks">Laiks</th>
+                                <th data-key="prece">Prece</th>
+                                <th data-key="darbiba" data-map>Darbība</th>
+                                <th data-key="no_vietas">No vietas</th>
+                                <th data-key="uz_vietu">Uz vietu</th>
+                                <th data-key="daudzums">Daudzums</th>
+                            </tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section id="dataEntry" class="panel hide" data-url="/api/vietas" data-delete="administrators" data-name="kods">
+                    <h2>Noliktavas vietas</h2>
+                    <form class="crudForm">
+                        <label>Vietas kods<input name="kods" required maxlength="30"></label>
+                        <button type="submit">Saglabāt</button>
+                        <button type="button" class="rowBtn cancel hide">Atcelt</button>
+                    </form>
+                    <p data-msg></p>
+                    <div class="tableWrap">
+                        <table>
+                            <thead><tr>
+                                <th data-key="kods">Vietas kods</th>
+                                <th>Darbības</th>
+                            </tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section id="placeOrder" class="panel hide">
                     <h2>Pasūtījumi</h2>
-                    <div class="crud"></div>
+                    <form class="crudForm">
+                        <label>Klients <input name="klients" required maxlength="150"></label>
+                        <label>Preces</label>
+                        <div class="orderLines"></div>
+                        <template>
+                            <div class="orderLine">
+                                <select required data-label="preces_kods,nosaukums"></select>
+                                <input type="number" min="1" step="1" required placeholder="Daudz.">
+                                <button type="button" class="rowBtn dangerBtn" aria-label="Noņemt rindu">✕</button>
+                            </div>
+                        </template>
+                        <button type="button" class="rowBtn add">+ Pievienot preci</button>
+                        <button type="submit">Izveidot pasūtījumu</button>
+                        <button type="button" class="rowBtn cancel hide">Atcelt</button>
+                    </form>
+                    <p data-msg></p>
+                    <div class="tableWrap">
+                        <table>
+                            <thead><tr>
+                                <th data-key="id">Nr.</th>
+                                <th data-key="klients">Klients</th>
+                                <th data-key="statuss" data-map>Statuss</th>
+                                <th data-key="preces">Preces</th>
+                                <th data-key="izveidoja">Izveidoja</th>
+                                <th data-key="izveidots">Izveidots</th>
+                                <th>Darbības</th>
+                            </tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </section>
 
-                <section id="adminHome" class="panel hide">
+                <section id="adminHome" class="panel hide" data-reports data-first>
                     <h2>Noliktavas darbības atskaites</h2>
                     <div class="reportButtons"></div>
-                    <div class="reportOut"></div>
+                    <p data-msg></p>
+                    <h3 class="reportTitle"></h3>
+                    <a class="csvLink hide">Lejupielādēt CSV</a>
+                    <div class="tableWrap"><table><thead><tr></tr></thead><tbody></tbody></table></div>
                 </section>
 
-                <section id="reportsWorker" class="panel hide">
+                <section id="reportsWorker" class="panel hide" data-reports>
                     <h2>Noliktavas darbības atskaites</h2>
                     <div class="reportButtons"></div>
-                    <div class="reportOut"></div>
+                    <p data-msg></p>
+                    <h3 class="reportTitle"></h3>
+                    <a class="csvLink hide">Lejupielādēt CSV</a>
+                    <div class="tableWrap"><table><thead><tr></tr></thead><tbody></tbody></table></div>
                 </section>
 
-                <section id="reportsSorter" class="panel hide">
+                <section id="reportsSorter" class="panel hide" data-reports>
                     <h2>Preču izvietojuma un stāvokļa atskaites</h2>
                     <div class="reportButtons"></div>
-                    <div class="reportOut"></div>
+                    <p data-msg></p>
+                    <h3 class="reportTitle"></h3>
+                    <a class="csvLink hide">Lejupielādēt CSV</a>
+                    <div class="tableWrap"><table><thead><tr></tr></thead><tbody></tbody></table></div>
                 </section>
             </main>
         </div>
- 
+
         <script src="app.js"></script>
     </body>
 </html>
